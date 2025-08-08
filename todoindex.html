@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>To-Do App</title>
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      background: linear-gradient(to bottom, #2d5e6d, #8acbdfa6);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+
+    .todo-container {
+      background: #77aeb0b8;
+      border-radius: 16px;
+      padding: 2rem;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      width: 100%;
+      max-width: 480px;
+    }
+
+    h1 {
+      text-align: center;
+      margin-bottom: 1rem;
+      font-size: 2rem;
+      color: #333;
+    }
+
+    .input-group {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .input-group input {
+      flex: 1;
+      padding: 0.75rem;
+      border: 1px solid #ddd;
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    .input-group button {
+      padding: 0.75rem 1.25rem;
+      border: none;
+      background: #5f48babd;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+
+    .input-group button:hover {
+      background: #8d7dcb;
+    }
+
+    .filters {
+      display: flex;
+      justify-content: space-between;
+      margin: 1rem 0;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+    }
+
+    .filters button {
+      padding: 0.5rem 1rem;
+      border-radius: 6px;
+      border: none;
+      cursor: pointer;
+      font-size: 0.9rem;
+    }
+
+    .filters .active {
+      background: #5f48baab;
+      color: white;
+    }
+
+    .filters button:not(.active) {
+      background: #e0e7ff;
+      color: #374151;
+    }
+
+    .task-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      max-height: 300px;
+      overflow-y: auto;
+    }
+
+    .task-list li {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: #f1f5f9;
+      padding: 0.75rem;
+      border-radius: 8px;
+      margin-bottom: 0.5rem;
+      transition: 0.2s ease;
+    }
+
+    .task-list li.completed {
+      opacity: 0.6;
+      text-decoration: line-through;
+    }
+
+    .task-actions {
+      display: flex;
+      gap: 0.5rem;
+    }
+
+    .task-actions button {
+      background: none;
+      border: none;
+      cursor: pointer;
+      font-size: 1rem;
+    }
+
+    .task-actions button:hover {
+      color: #f87171;
+    }
+
+    .status {
+      text-align: center;
+      margin-top: 1rem;
+      color: #555;
+    }
+  </style>
+</head>
+<body>
+  <div class="todo-container">
+    <h1>📝 My Tasks</h1>
+    <div class="input-group">
+      <input type="text" id="taskInput" placeholder="What do you need to do?" />
+      <button id="addTask">Add</button>
+    </div>
+    <div class="filters">
+      <button class="filter-btn active" data-filter="all">All</button>
+      <button class="filter-btn" data-filter="active">Active</button>
+      <button class="filter-btn" data-filter="completed">Completed</button>
+      <button id="clearCompleted" style="margin-left:auto;background:#7f0a0abe;color:#fff;">Clear</button>
+    </div>
+    <ul id="taskList" class="task-list"></ul>
+    <div class="status">
+      <span id="remainingCount">0</span> tasks remaining
+    </div>
+  </div>
+
+  <script>
+    const taskInput = document.getElementById('taskInput');
+    const addTaskButton = document.getElementById('addTask');
+    const taskList = document.getElementById('taskList');
+    const filterButtons = document.querySelectorAll('.filter-btn');
+    const clearCompletedButton = document.getElementById('clearCompleted');
+    const remainingCount = document.getElementById('remainingCount');
+
+    let tasks = JSON.parse(localStorage.getItem('tasks')) || [];
+    let currentFilter = 'all';
+
+    function saveTasks() {
+      localStorage.setItem('tasks', JSON.stringify(tasks));
+    }
+
+    function updateCount() {
+      const activeCount = tasks.filter(t => !t.completed).length;
+      remainingCount.textContent = activeCount;
+    }
+
+    function renderTasks() {
+      taskList.innerHTML = '';
+
+      const filtered = tasks.filter(task => {
+        if (currentFilter === 'active') return !task.completed;
+        if (currentFilter === 'completed') return task.completed;
+        return true;
+      });
+
+      filtered.forEach(task => {
+        const li = document.createElement('li');
+        li.className = task.completed ? 'completed' : '';
+        li.innerHTML = `
+          <span onclick="toggleComplete('${task.id}')" style="cursor:pointer;flex-grow:1;">${task.text}</span>
+          <div class="task-actions">
+            <button onclick="editTask('${task.id}')">✏️</button>
+            <button onclick="deleteTask('${task.id}')">🗑️</button>
+          </div>
+        `;
+        taskList.appendChild(li);
+      });
+
+      updateCount();
+    }
+
+    function addTask() {
+      const text = taskInput.value.trim();
+      if (text === '') return;
+      tasks.push({ id: Date.now().toString(), text, completed: false });
+      taskInput.value = '';
+      saveTasks();
+      renderTasks();
+    }
+
+    function toggleComplete(id) {
+      tasks = tasks.map(t => t.id === id ? { ...t, completed: !t.completed } : t);
+      saveTasks();
+      renderTasks();
+    }
+
+    function deleteTask(id) {
+      tasks = tasks.filter(t => t.id !== id);
+      saveTasks();
+      renderTasks();
+    }
+
+    function editTask(id) {
+      const task = tasks.find(t => t.id === id);
+      const newText = prompt("Edit your task:", task.text);
+      if (newText !== null && newText.trim() !== '') {
+        task.text = newText.trim();
+        saveTasks();
+        renderTasks();
+      }
+    }
+
+    filterButtons.forEach(btn => {
+      btn.addEventListener('click', () => {
+        filterButtons.forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentFilter = btn.dataset.filter;
+        renderTasks();
+      });
+    });
+
+    clearCompletedButton.addEventListener('click', () => {
+      tasks = tasks.filter(t => !t.completed);
+      saveTasks();
+      renderTasks();
+    });
+
+    addTaskButton.addEventListener('click', addTask);
+    taskInput.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') addTask();
+    });
+
+    renderTasks();
+  </script>
+</body>
+</html>
